@@ -8,7 +8,10 @@
 
 void showUsage(){
 	std::cout << "Usage: ./readtxt [OPTIONS] [FILENAME]" << std::endl;
-	std::cout << "\tOPTIONS GO HERE" << std::endl;
+	//std::cout << "\tOPTIONS GO HERE" << std::endl;
+	std::cout << "\t-h:\tDisplays this help message." << std::endl;
+	std::cout << "\t-a ADDRESS:\tSpecifies the conversation by address" << std::endl;
+	std::cout << "\t-l:\tLists all conversations by address" << std::endl;
 	exit(EXIT_FAILURE);
 }
 
@@ -45,7 +48,7 @@ int main(int argc, char **argv){
 
 	//opterr = 0;
 
-	while ((c = getopt(argc, argv, "a:l")) != -1){
+	while ((c = getopt(argc, argv, "ha:l")) != -1){
 		switch(c){
 			case 'a':
 				address = optarg;
@@ -61,6 +64,7 @@ int main(int argc, char **argv){
 				else
 					fprintf (stderr, "Unknown option character `\\x%x'.\n", optopt);
 					return EXIT_FAILURE;
+			case 'h':
 			default:
 				showUsage();
 		}

@@ -1,5 +1,6 @@
 #include <iostream>
 #include <cstdlib>
+#include "pugixml/pugixml.cpp"
 
 void showUsage(){
 	std::cout << "Usage: ./readtxt [OPTIONS] [FILENAME]" << std::endl;
@@ -34,7 +35,7 @@ int main(int argc, char **argv){
 
 	std::cout << "Reading from file " << file_name << std::endl;
 
-	pugi::xml_parse_result result = doc.load_file("test.xml");
+	pugi::xml_parse_result result = doc.load_file(file_name.c_str());
 
 	std::cout << "Load result: " << result.description() << ", mesh name: " << doc.child("mesh").attribute("name").value() << std::endl;
 

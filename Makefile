@@ -1,7 +1,7 @@
 CC=gcc
 CXX=g++
 RM=rm -f
-CPPFLAGS=-g -Wall
+CPPFLAGS=-g -Werror -std=c++11
 SRCS=readtxt.cpp
 OBJS=$(subst .cpp,.o,$(SRCS))
 

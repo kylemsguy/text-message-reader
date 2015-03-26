@@ -1,2 +1,3 @@
 *.o
-readtext
+readtxt
+messages*.xml

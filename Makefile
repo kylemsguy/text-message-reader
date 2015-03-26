@@ -8,7 +8,7 @@ OBJS=$(subst .cpp,.o,$(SRCS))
 all: readtxt
 
 readtxt: $(OBJS)
-	$(CXX) $(LDFLAGS) -o tool $(OBJS) $(LDLIBS) 
+	$(CXX) $(LDFLAGS) -o readtxt $(OBJS) $(LDLIBS) 
 
 clean:
 	$(RM) $(OBJS)

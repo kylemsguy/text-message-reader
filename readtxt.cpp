@@ -3,8 +3,14 @@
 #include <sstream>
 #include <vector>
 #include <cstdlib>
-#include <sys/wait.h>
-#include <unistd.h>
+
+#ifdef __linux__
+	#include <sys/wait.h>
+	#include <unistd.h>
+#elif _WIN32
+	#include <windows.h>
+#endif
+
 #include "pugixml/pugixml.cpp"
 
 void show_usage(){

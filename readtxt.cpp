@@ -7,23 +7,31 @@
 #include <unistd.h>
 #include "pugixml/pugixml.cpp"
 
-void showUsage(){
+void show_usage(){
 	std::cout << "Usage: ./readtxt [OPTIONS] [FILENAME]" << std::endl;
 	//std::cout << "\tOPTIONS GO HERE" << std::endl;
 	std::cout << "\t-h:\tDisplays this help message." << std::endl;
-	std::cout << "\t-a ADDRESS:\tSpecifies the conversation by address" << std::endl;
+	std::cout << "\t-a ADDR: Specifies the conversation by address" << std::endl;
+	std::cout << "\t-i:\tInteractive mode." << std::endl;
 	std::cout << "\t-l:\tLists all conversations by address" << std::endl;
 	std::cout << "\t-s:\tSends thread data directly to stdout" << std::endl;
 	exit(EXIT_FAILURE);
 }
 
-std::string getFileName(){
+std::string get_filename(){
 	std::string file_name;
 
 	std::cout << "File> ";
 	std::getline(std::cin, file_name);
 
 	return file_name;
+}
+
+std::vector<std::string> get_addresses(pugi::xml_node threads){
+	std::vector<std::string> address_list;
+	for (pugi::xml_node thread = threads.child("thread"); thread; thread = thread.next_sibling("thread"))
+		address_list.push_back(thread.attribute("address").value());
+	return address_list;
 }
 
 std::string threadToString(pugi::xml_node thread){
@@ -42,7 +50,39 @@ std::string threadToString(pugi::xml_node thread){
 
 }
 
+void send_to_less(std::string str){
+	int pip[2];
+	int result;
+	pid_t pid;
+	result = pipe(pip);
+	if(result == -1){
+		perror("pipe");
+		exit(EXIT_FAILURE);
+	}
+	pid = fork();
+	if(pid > 0){
+		// parent
+		int status;
+		close(pip[0]);
+		write(pip[1], str.c_str(), str.length());
+		close(pip[1]);
+		wait(&status);
+		fprintf(stderr, "Exit status: %d\n", WEXITSTATUS(status));
+	}
+	else if(pid == 0){
+		// child
+		close(pip[1]);
+		dup2(pip[0], STDIN_FILENO);
+		execlp("/usr/bin/less", "less", NULL);
+	}
+	else{
+		perror("fork");
+		exit(EXIT_FAILURE);
+	}
+}
+
 int main(int argc, char **argv){
+	bool interactive = false;
 	bool list_addresses = false;
 	bool display_less = true;
 	std::string file_name;
@@ -55,7 +95,7 @@ int main(int argc, char **argv){
 
 	opterr = 0;
 
-	while ((c = getopt(argc, argv, "ha:ls")) != -1){
+	while ((c = getopt(argc, argv, "iha:ls")) != -1){
 		switch(c){
 			case 'a':
 				address = optarg;
@@ -65,6 +105,9 @@ int main(int argc, char **argv){
 				break;
 			case 's':
 				display_less = false;
+				break;
+			case 'i':
+				interactive = true;
 				break;
 			case '?':
 				if(optopt == 'c')
@@ -76,19 +119,21 @@ int main(int argc, char **argv){
 					return EXIT_FAILURE;
 			case 'h':
 			default:
-				showUsage();
+				show_usage();
 		}
 	}
 
 	if(argc - optind > 1)
-		showUsage();
+		show_usage();
 
 	for (index = optind; index < argc; index++){
 		file_name = argv[index];
 	}
 
-	if(file_name.empty())
-		file_name = getFileName();
+	if(file_name.empty() && interactive)
+		file_name = get_filename();
+	else
+		show_usage();
 
 	std::cout << "Reading from file " << file_name << std::endl;
 
@@ -99,48 +144,22 @@ int main(int argc, char **argv){
 	std::cout << "Load result: " << result.description() << ", Thread count: " << threads.attribute("count").value() << std::endl;
 
 	if(list_addresses){
-		for (pugi::xml_node thread = threads.child("thread"); thread; thread = thread.next_sibling("thread")){
-			std::cout << thread.attribute("address").value() << std::endl;
-			//threads.push_back(thread);
-
+		std::vector<std::string> addresses = get_addresses(threads);
+		for(auto address: addresses){
+			std::cout << address << std::endl;
 		}
 	}
 	else{
-		if(address.empty()){
+		if(address.empty() && interactive){
 			std::cout << "Address> ";
 			std::getline(std::cin, input);
 			address = input;
 		}
+		else
+			show_usage();
 		thread_string = threadToString(threads.find_child_by_attribute("thread", "address", address.c_str()));
 		if(display_less){
-			int pip[2];
-			int result;
-			pid_t pid;
-			result = pipe(pip);
-			if(result == -1){
-				perror("pipe");
-				exit(EXIT_FAILURE);
-			}
-			pid = fork();
-			if(pid > 0){
-				// parent
-				int status;
-				close(pip[0]);
-				write(pip[1], thread_string.c_str(), thread_string.length());
-				close(pip[1]);
-				wait(&status);
-				fprintf(stderr, "Exit status: %d\n", WEXITSTATUS(status));
-			}
-			else if(pid == 0){
-				// child
-				close(pip[1]);
-				dup2(pip[0], STDIN_FILENO);
-				execlp("/usr/bin/less", "less", NULL);
-			}
-			else{
-				perror("fork");
-				exit(EXIT_FAILURE);
-			}
+			send_to_less(thread_string);
 		}
 		else{
 			std::cout << thread_string;
